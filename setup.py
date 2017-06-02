@@ -7,9 +7,7 @@ from setuptools import setup
 # To use a consistent encoding
 here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+
 
 setup(
     name='gitleak',
@@ -18,7 +16,7 @@ setup(
 
     description='A tool library for searching your leaked sourcecode on github',
 
-    long_description=long_description,
+    long_description='A tool library for searching your leaked sourcecode on github',
 
     url='https://github.com/lfzark/gitleak',
 
