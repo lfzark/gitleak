@@ -204,7 +204,10 @@ class GitLeak():
         if len(result_num) == 0:
             return 0
         else:
-            return result_num[0].string
+            if result_num[0].string.find('K'):
+                result_num[0].string=result_num[0].string.replace('K',"000")
+            elif result_num[0].string.find('M'):
+                result_num[0].string=result_num[0].string.replace('M',"000000")
 
     def scan(self, _sensitive_word):
  
