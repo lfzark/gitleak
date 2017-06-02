@@ -34,7 +34,7 @@ def judge_login(func):
 
 class GitLeak():
     '''
-    Github泄漏监控
+    Github代码泄漏扫描
     '''
 
     def __init__(self, _keyword='ark1ee'):
