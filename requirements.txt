@@ -1,2 +1,3 @@
 requests
 beautifulsoup
+html5lib
