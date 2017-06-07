@@ -12,7 +12,7 @@ here = path.abspath(path.dirname(__file__))
 setup(
     name='gitleak',
 
-    version='0.9.1',
+    version='0.9.2.3',
 
     description='A tool library for searching your leaked sourcecode on github',
 

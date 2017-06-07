@@ -52,6 +52,25 @@ class GitLeak():
         self.is_logged = False
         self.project_result = []
         self.set_query_url()
+        self._max_page = None
+        
+    @property
+    def max_page(self):
+        """
+        The fee property - the getter
+        """
+        return self._max_page
+ 
+    #----------------------------------------------------------------------
+    @max_page.setter
+    def max_page(self, value):
+        """
+        The setter of the max_page property
+        """
+        if isinstance(value, str):
+            self._max_page = Decimal(value)
+        elif isinstance(value, Decimal):
+            self._max_page = value
 
     def login(self, username, password):
 
@@ -127,11 +146,16 @@ class GitLeak():
             logging.error('no project found.')
             exit()
 
-        if total_page < MAX_PAGE:
+
+        if      self.max_page :
+            end_page = self.max_page
+            
+        elif total_page < MAX_PAGE:
             end_page = total_page 
+            
         else:
             end_page = MAX_PAGE 
-            
+        
         for _ in range(1, end_page + 1):
             
             
@@ -235,8 +259,12 @@ class GitLeak():
     def get_unique_proj_list(self): 
         total_page = self.get_total_page()
         result_list = []
+        
         if total_page > MAX_PAGE:
             total_page = MAX_PAGE
+            
+        if self.max_page :
+            total_page = self.max_page
 
         for _ in range(1, total_page + 1):
             result = self.extract_project_list(self.get_page_content(page=_))
