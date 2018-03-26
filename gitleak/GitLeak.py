@@ -8,6 +8,7 @@ import requests
 import sys
 import time
 import urllib
+import os
 from  gl_config import *
 
 
@@ -53,15 +54,14 @@ class GitLeak():
         self.project_result = []
         self.set_query_url()
         self._max_page = None
-        
+
     @property
     def max_page(self):
         """
         The fee property - the getter
         """
         return self._max_page
- 
-    #----------------------------------------------------------------------
+
     @max_page.setter
     def max_page(self, value):
         """
@@ -73,6 +73,9 @@ class GitLeak():
             self._max_page = value
 
     def login(self, username, password):
+        '''
+        login github
+        '''
 
         login_content = self.q.get(LOGIN_URL).content
         token_finder = BeautifulSoup(login_content, "html.parser")
@@ -85,43 +88,48 @@ class GitLeak():
             "password": password,
             'authenticity_token':token
         }
- 
+
         login_content  = self.q.post(SESSION_URL, data=post_params,).content
-         
 
         if login_content.count(username) > True and login_content.find('Forgot password?') == -1:
-            
+
             logging.info('login successfully')
             self.is_logged = True
-            
+
         else:
             logging.error('login failed')
             self.is_logged = False
 
         return self.is_logged
 
-
     def set_query_url(self, repository='', order='desc', keyword=None, stype='Code', s='indexed'):
-        
+
         if keyword != None:
             _keyword = keyword
         else:
             _keyword = self.keyword
 
-        self.url = 'https://github.com/%ssearch?o=%s&utf8=✓&q=%s&s=%s&type=%s' % \
-                    (urllib.quote(repository.decode(sys.stdin.encoding).encode('gbk')) + '/', order, _keyword, s, stype)
-        
+        self.url = (SEARCH_URL if repository == '' else PROECT__SEARCH_URL) % \
+                    (urllib.quote(repository.decode(sys.stdin.encoding).encode('gbk')) , order, _keyword, s, stype)
+
         return self.url
 
     @judge_login
     def get_page_content(self, page=1, url=None):
+
         time.sleep(INTERVAL_TIME)
+
         if url == None:
             rquest_url = self.url
         else:
             rquest_url = url
 
+        print rquest_url + "&p=%s" % page
+
         logging.debug('[+] request' + rquest_url + "&p=%s" % page)
+
+        #https://github.com/search?o=desc&utf8=✓&q=ark1ee&s=indexed&type=Code&p=1
+        #https://github.com/search?o=desc&q=ark1ee&s=indexed&type=Code&utf8=%E2%9C%93
 
         try:
             r = self.q.get(rquest_url + "&p=%s" % page)
@@ -133,7 +141,7 @@ class GitLeak():
              
         except Exception as e:
             return '<html>%s</html>' % e
-        
+
     def get_total_page(self):
         
         return int(math.ceil (int(self.get_total_result()) / NUM_PAGE))
@@ -157,8 +165,7 @@ class GitLeak():
             end_page = MAX_PAGE 
         
         for _ in range(1, end_page + 1):
-            
-            
+
             html_content = self.get_page_content(page=_)
             p_result = self.extract_project_list(html_content)
             
@@ -170,13 +177,13 @@ class GitLeak():
 
         result = []
         soup = BeautifulSoup(html_content, 'html5lib')
-        #
+
         code_list = soup.find_all(attrs={'class': 'code-list-item'})
 
         if len(code_list) > 0:
-            
+
             for item in code_list:
-                #
+
                 project_info = item.select(PROECT_INFO_XPATH)[0]
                 project_href = 'https://github.com/%s' % project_info.attrs['href']
                 project_name = project_info.string 
@@ -185,13 +192,15 @@ class GitLeak():
                 file_name = file_info.string 
 
                 indexed_time = item.find('relative-time').attrs['datetime']
-                
+
                 result.append({'project_name':project_name, 'project_href':project_href, 'file_name':file_name, 'file_href':file_href, 'indexed_time':indexed_time})
 
         return result 
 
-
     def get_total_result(self, content=None):
+        '''
+        Get total search result count
+        '''
 
         if content == None:
             page_content = self.get_page_content()
@@ -199,20 +208,22 @@ class GitLeak():
             page_content = content
 
         s = BeautifulSoup(page_content, "lxml")
-  
+
         result_num = s.select(RESULT_NUM_RE)
-        
+
         num = 0
-        
+
         if len(result_num) == 0:
             return 0
         else:
-            if result_num[0].string.endswith('K'):
-                num = result_num[0].string[:-1]+'0'*3
-            elif result_num[0].string.endswith('M'):
-                num = result_num[0].string[:-1]+'0'*6
+            result_num = result_num[0].get_text()
+
+            if result_num.endswith('K'):
+                num = result_num[:-1]+'0'*3
+            elif result_num.endswith('M'):
+                num = result_num[:-1]+'0'*6
             else:
-                num = result_num[0].string
+                num = result_num
             return num
 
     def get_total_result_from_proj(self, content=None):
@@ -223,23 +234,22 @@ class GitLeak():
             page_content = content
 
         s = BeautifulSoup(page_content, "lxml")
-        
-       
+
         result_num = s.select(RESULT_NUM_RE_PROJ)
-        
+
         num = 0
-        
+
         if len(result_num) == 0:
             return 0
         else:
-            if result_num[0].string.endswith('K'):
-                num = result_num[0].string[:-1]+'0'*3
-            elif result_num[0].string.endswith('M'):
-                num = result_num[0].string[:-1]+'0'*6
+            result_num = result_num[0].get_text()
+            if result_num.endswith('K'):
+                num = result_num[:-1]+'0'*3
+            elif result_num.endswith('M'):
+                num = result_num[:-1]+'0'*6
             else:
-                num = result_num[0].string
+                num = result_num
             return num
-
 
     @judge_login
     def scan(self, _sensitive_word):
@@ -248,15 +258,18 @@ class GitLeak():
 
         key_result = {}
         for proj in proj_list_duplicate:
+            print '=======',proj,'========'
+
             p_url = self.set_query_url(repository=proj, keyword=_sensitive_word)
             p_content = self.get_page_content(url=p_url)
             key_num = self.get_total_result_from_proj(p_content)
             if key_num > 0:
                 key_result[proj] = key_num
         return key_result
-    
+
     @judge_login
     def get_unique_proj_list(self): 
+
         total_page = self.get_total_page()
         result_list = []
         
@@ -269,12 +282,12 @@ class GitLeak():
         for _ in range(1, total_page + 1):
             result = self.extract_project_list(self.get_page_content(page=_))
             result_list += result
-            
+
         # 去重
         proj_list = map(lambda x :x['project_name'], result_list)
 
         proj_list_duplicate = list(set(proj_list))
-        
+
         logging.info('after duplicate removal [%d -> %d]' % (len(proj_list), len(proj_list_duplicate)))
 
         return proj_list_duplicate
@@ -285,12 +298,17 @@ class GitLeak():
         proj_list_unique = self.get_unique_proj_list()
  
         scan_result = {}
+
         with open(path, 'r') as k_dict:
-            for k in  k_dict.readlines():
+
+            for k in k_dict.readlines():
 
                 for proj in proj_list_unique:
+
                     p_url = self.set_query_url(repository=proj, keyword=k)
+
                     p_content = self.get_page_content(url=p_url)
+
                     key_num = self.get_total_result_from_proj(p_content)
                     if key_num > 0:
                         scan_result[proj] = {}
